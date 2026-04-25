@@ -69,3 +69,13 @@ model Transcript {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+
+  @@map("verification")
+}

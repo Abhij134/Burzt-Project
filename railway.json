@@ -6,7 +6,7 @@
     "deploy": {
         "runtime": "V2",
         "numReplicas": 1,
-        "startCommand": "npm run start",
+        "startCommand": "npx prisma migrate deploy && npm run start",
         "sleepApplication": false,
         "useLegacyStacker": false,
         "ipv6EgressEnabled": true,
