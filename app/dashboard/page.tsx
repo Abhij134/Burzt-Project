@@ -389,14 +389,15 @@ export default async function DashboardPage() {
 
         /* Stagger the start times */
         .phrase-1 { animation-delay: 0s; }
-        .phrase-2 { animation-delay: 4.5s; }
+        .phrase-2 { animation-delay: 3s; }
+        .phrase-3 { animation-delay: 6s; }
 
         /* The motion: Fade in from top, hold, fade out to bottom */
         @keyframes slideDownCycle {
           0% { opacity: 0; transform: translateY(-15px); }
           8% { opacity: 1; transform: translateY(0); }
-          40% { opacity: 1; transform: translateY(0); }
-          50% { opacity: 0; transform: translateY(15px); }
+          25% { opacity: 1; transform: translateY(0); }
+          33% { opacity: 0; transform: translateY(15px); }
           100% { opacity: 0; transform: translateY(15px); }
         }
       `}</style>
@@ -447,6 +448,10 @@ export default async function DashboardPage() {
                                 Upload any audio file
                             </div>
                             <div className="subtitle-phrase phrase-2">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                Paste any video URL
+                            </div>
+                            <div className="subtitle-phrase phrase-3">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" strokeLinejoin="round" d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3zm5-3a5 5 0 01-10 0M12 18v3m-2 0h4" /></svg>
                                 Record live from mic
                             </div>
