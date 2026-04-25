@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { transcribeAudio, saveTranscript } from "@/app/actions/transcribe";
 
 type Stage = "idle" | "uploading" | "processing" | "done" | "error";
-type Panel = "main" | "recording" | "url";
+type Panel = "main" | "recording";
 
 function formatBytes(bytes: number) {
     if (bytes < 1024) return `${bytes} B`;
@@ -31,7 +31,6 @@ export default function TranscriberClient() {
     const [panel, setPanel] = useState<Panel>("main");
     const [isRecording, setIsRecording] = useState(false);
     const [recordTime, setRecordTime] = useState(0);
-    const [urlInput, setUrlInput] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,13 +76,6 @@ export default function TranscriberClient() {
         mediaRecorderRef.current?.stop();
     };
 
-    const handleUrlSubmit = () => {
-        if (!urlInput.trim()) return;
-        setErrorMsg("Direct URL transcription is not supported yet. Please download the audio and upload it.");
-        setStage("error");
-        setPanel("main");
-        setUrlInput("");
-    };
 
     const getAudioDuration = (f: File) => {
         const url = URL.createObjectURL(f);
@@ -939,17 +931,6 @@ export default function TranscriberClient() {
                                 <div className="opt-sub">Capture from mic</div>
                             </div>
                         </div>
-                        <div className="option-card" onClick={() => setPanel("url")}>
-                            <div className="opt-icon link">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2" width="18" height="18">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                </svg>
-                            </div>
-                            <div className="opt-info">
-                                <div className="opt-title">From URL</div>
-                                <div className="opt-sub">YouTube, Drive, ...</div>
-                            </div>
-                        </div>
                     </div>
                 )}
 
@@ -967,23 +948,6 @@ export default function TranscriberClient() {
                     </div>
                 )}
 
-                {/* ── URL Panel ── */}
-                {panel === "url" && stage === "idle" && (
-                    <div className="url-panel">
-                        <div className="url-input-wrap">
-                            <input
-                                className="url-input"
-                                type="url"
-                                placeholder="Paste audio URL here..."
-                                value={urlInput}
-                                onChange={(e) => setUrlInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
-                            />
-                            <button className="url-go" onClick={handleUrlSubmit}>Go</button>
-                        </div>
-                        <span className="back-link" onClick={() => { setPanel("main"); setUrlInput(""); }}>← Back to upload</span>
-                    </div>
-                )}
             </div>
         </>
     );
