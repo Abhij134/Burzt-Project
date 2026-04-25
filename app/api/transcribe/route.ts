@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         const base64Data = Buffer.from(arrayBuffer).toString("base64");
 
         // Use gemini-1.5-flash which is extremely fast and efficient for audio
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         // Pass inline data to Gemini
         const result = await model.generateContent([

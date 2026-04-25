@@ -24,3 +24,152 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Warm Bright Theme Overrides ── */
+html.warm-theme body,
+html.warm-theme .login-root,
+html.warm-theme .db-root {
+  background: #faf7f2 !important;
+  color: #3f3b33 !important;
+}
+
+html.warm-theme .grid-bg,
+html.warm-theme .db-grid {
+  background-image:
+    linear-gradient(rgba(217, 119, 6, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(217, 119, 6, 0.08) 1px, transparent 1px) !important;
+}
+
+html.warm-theme .glow-orb {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 70%) !important;
+}
+
+html.warm-theme .login-card,
+html.warm-theme .upload-panel,
+html.warm-theme .history-panel,
+html.warm-theme .stat-card,
+html.warm-theme .t-card,
+html.warm-theme .db-inner .topbar {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(217, 119, 6, 0.15) !important;
+  box-shadow: 0 8px 32px rgba(217, 119, 6, 0.04) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+html.warm-theme .db-inner .topbar {
+  background: rgba(250, 247, 242, 0.8) !important;
+}
+
+html.warm-theme .card-headline,
+html.warm-theme .page-title,
+html.warm-theme .stat-value {
+  color: #292524 !important;
+}
+
+html.warm-theme .card-headline span,
+html.warm-theme .page-title span {
+  background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+html.warm-theme .logo-mark,
+html.warm-theme .logo-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+}
+
+html.warm-theme .logo-icon svg,
+html.warm-theme .logo-mark svg {
+  color: #fff !important;
+}
+
+html.warm-theme .logo-text,
+html.warm-theme .logo-name,
+html.warm-theme .panel-title,
+html.warm-theme .history-title {
+  color: #57534e !important;
+}
+
+html.warm-theme .panel-title::after {
+  background: rgba(217, 119, 6, 0.1) !important;
+}
+
+html.warm-theme .field-label,
+html.warm-theme .card-sub,
+html.warm-theme .page-sub,
+html.warm-theme .t-date,
+html.warm-theme .t-text,
+html.warm-theme .stat-label {
+  color: #78716c !important;
+}
+
+html.warm-theme .field-input::placeholder {
+  color: #a8a29e !important;
+}
+
+html.warm-theme .field-input {
+  background: #fff !important;
+  border: 1px solid rgba(217, 119, 6, 0.2) !important;
+  color: #292524 !important;
+}
+
+html.warm-theme .submit-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: white !important;
+}
+
+html.warm-theme .wave-bar {
+  background: #f59e0b !important;
+}
+
+html.warm-theme .topbar {
+  border-bottom: 1px solid rgba(217, 119, 6, 0.1) !important;
+}
+
+html.warm-theme .t-card::before {
+  background: linear-gradient(to bottom, #f59e0b, transparent) !important;
+}
+
+html.warm-theme .t-card:hover {
+  background: rgba(245, 158, 11, 0.03) !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+html.warm-theme .user-pill,
+html.warm-theme .user-email {
+  color: #57534e !important;
+  border-color: rgba(217, 119, 6, 0.15) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.warm-theme .avatar {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2)) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #d97706 !important;
+}
+
+html.warm-theme .stat-value.accent,
+html.warm-theme .count-badge,
+html.warm-theme .t-words {
+  color: #d97706 !important;
+}
+
+html.warm-theme .count-badge,
+html.warm-theme .t-words {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+html.warm-theme .page-eyebrow {
+  color: #d97706 !important;
+}
+
+html.warm-theme .eyebrow-line {
+  background: #d97706 !important;
+}
+
+html.warm-theme .empty-state {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(217, 119, 6, 0.15) !important;
+}

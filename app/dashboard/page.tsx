@@ -3,97 +3,479 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import TranscriberClient from "./TranscriberClient";
+import SignOutButton from "./SignOutButton";
+import ActivityList from "./ActivityList";
+import SearchBar from "./SearchBar";
 
 export default async function DashboardPage() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) redirect("/login");
 
-    if (!session) {
-        redirect("/login");
-    }
-
-    // Server-side database fetch
     const transcripts = await prisma.transcript.findMany({
         where: { userId: session.user.id },
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
     });
 
+    const initials = (session.user.email ?? "U")
+        .split("@")[0]
+        .slice(0, 2)
+        .toUpperCase();
+
     return (
-        <div className="min-h-screen bg-slate-50 text-gray-900 p-8 pb-16 font-sans">
-            <div className="max-w-5xl mx-auto space-y-8">
+        <>
+            <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-                <header className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-inner">
-                            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                            </svg>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          background: #0f1016; /* Base dark */
+          color: #e2e8f0;
+          font-family: 'Inter', sans-serif;
+          min-height: 100vh;
+        }
+
+        .db-root {
+          min-height: 100vh;
+          background: radial-gradient(circle at 30% 10%, #281a42 0%, #0d0f16 60%, #0b0c13 100%);
+          position: relative;
+        }
+
+        .db-inner {
+          position: relative;
+          z-index: 1;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px 80px;
+        }
+
+        /* ── Topbar ── */
+        .topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 24px 0;
+          margin-bottom: 50px;
+          z-index: 10;
+        }
+
+        .topbar-left {
+          display: flex;
+          align-items: center;
+          gap: 32px;
+          flex: 1;
+        }
+
+        /* Logo retained for branding */
+        .logo-group {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .logo-mark {
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #c084fc, #06b6d4);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .logo-mark svg { width: 18px; height: 18px; color: #0d0f16; }
+
+        .logo-name {
+          font-size: 16px;
+          font-weight: 700;
+          color: #f1f5f9;
+          letter-spacing: 0.02em;
+        }
+
+        .search-bar {
+          display: flex;
+          align-items: center;
+          background: rgba(18, 15, 33, 0.7);
+          border: 1px solid rgba(255,255,255,0.04);
+          border-radius: 100px;
+          padding: 8px 16px;
+          width: 100%;
+          max-width: 360px;
+          gap: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .search-bar svg { width: 16px; height: 16px; color: #94a3b8; }
+        .search-bar input {
+          background: transparent;
+          border: none;
+          color: #e2e8f0;
+          font-size: 13px;
+          font-family: 'Inter', sans-serif;
+          flex: 1;
+          outline: none;
+        }
+        .search-bar input::placeholder { color: #64748b; }
+        .cmd-k {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px;
+          color: #94a3b8;
+          background: rgba(255,255,255,0.06);
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .topbar-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+
+
+        .user-pill {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(25, 18, 43, 0.6);
+          border: 1px solid rgba(255,255,255,0.04);
+          border-radius: 40px;
+          padding: 4px 16px 4px 4px;
+        }
+
+        .avatar {
+          width: 28px;
+          height: 28px;
+          background: linear-gradient(135deg, #06b6d4, #c084fc);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 700;
+          color: #0d0f16;
+        }
+
+        .user-email {
+          font-size: 13px;
+          font-weight: 500;
+          color: #94a3b8;
+        }
+
+        /* ── Page Header ── */
+        .page-header {
+          margin-bottom: 60px;
+          animation: fade-up 0.5s ease;
+          max-width: 600px;
+        }
+
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-eyebrow {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          color: #c084fc;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-weight: 600;
+        }
+
+        .eyebrow-dot {
+          width: 8px;
+          height: 8px;
+          background: #c084fc;
+          border-radius: 50%;
+          box-shadow: 0 0 12px #c084fc;
+        }
+
+        .page-title {
+          font-size: clamp(48px, 6vw, 72px);
+          font-weight: 800;
+          color: #ffffff;
+          line-height: 1.05;
+          letter-spacing: -0.02em;
+          margin-bottom: 24px;
+        }
+
+        .page-title span {
+          background: linear-gradient(90deg, #d8b4fe, #818cf8, #2dd4bf);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .page-sub {
+          font-size: 17px;
+          color: #94a3b8;
+          line-height: 1.6;
+        }
+
+        /* ── Sidebar Stats ── */
+        .sidebar-column {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .sidebar-stats {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .stat-card {
+          background: #110e1a;
+          border: 1px solid rgba(255,255,255,0.03);
+          border-radius: 16px;
+          padding: 24px;
+          position: relative;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .stat-icon {
+          position: absolute;
+          top: 24px;
+          right: 24px;
+          color: #818cf8;
+          opacity: 0.8;
+        }
+        .stat-icon svg { width: 18px; height: 18px; }
+
+        .stat-label {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          color: #94a3b8;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin-bottom: 12px;
+        }
+
+        .stat-value {
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1;
+        }
+
+        .stat-value.primary { color: #ffffff; }
+        .stat-value.gradient {
+          background: linear-gradient(90deg, #d8b4fe, #2dd4bf);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        /* ── Grid Layout ── */
+        .main-grid {
+          display: grid;
+          grid-template-columns: 460px 1fr;
+          gap: 32px;
+          align-items: start;
+        }
+
+        @media (max-width: 960px) {
+          .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── History Panel ── */
+        .history-panel {
+          background: rgba(18, 15, 33, 0.4);
+          border: 1px solid rgba(255,255,255,0.03);
+          border-radius: 20px;
+          padding: 32px;
+          animation: fade-up 0.5s ease 0.15s both;
+        }
+      `}</style>
+
+            <div className="db-root">
+                <div className="db-inner">
+                    {/* Topbar */}
+                    <div className="topbar">
+                        <div className="topbar-left">
+                            <div className="logo-group">
+                                <div className="logo-mark">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round"
+                                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                    </svg>
+                                </div>
+                                <span className="logo-name">Burzt Audio</span>
+                            </div>
+
+                            <SearchBar items={transcripts.map(t => ({
+                                id: t.id,
+                                title: t.title ?? null,
+                                text: t.text,
+                                createdAt: t.createdAt.toISOString(),
+                            }))} />
                         </div>
-                        <h1 className="text-2xl font-extrabold text-blue-900 tracking-tight">Audio Transcriber</h1>
+
+                        <div className="topbar-right">
+                            <div className="user-pill">
+                                <div className="avatar">{initials}</div>
+                                <span className="user-email">{session.user.email}</span>
+                            </div>
+                            <SignOutButton />
+                        </div>
                     </div>
 
-                    <div className="text-sm font-medium text-gray-500 bg-gray-100 py-1.5 px-4 rounded-full">
-                        {session.user.email}
+                    {/* Page Header */}
+                    <div className="page-header">
+                        <div className="page-eyebrow">
+                            <span className="eyebrow-dot" />
+                            LIVE · AUDIO INTELLIGENCE V2
+                        </div>
+                        <h1 className="page-title">
+                            Turn sound<br />
+                            into <span>signal.</span>
+                        </h1>
                     </div>
-                </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-
-                    {/* Upload Section - 5 columns width */}
-                    <div className="md:col-span-5">
+                    {/* Main Grid */}
+                    <div className="main-grid">
+                        {/* Upload Panel component wrapper */}
                         <TranscriberClient />
-                    </div>
 
-                    {/* History Section - 7 columns width */}
-                    <div className="md:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[650px] overflow-y-auto custom-scrollbar">
-                        <div className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 pb-4 mb-4 border-b border-gray-100 flex justify-between items-center">
-                            <h2 className="text-xl font-bold text-gray-800">Your Transcripts History</h2>
-                            <span className="text-xs font-semibold bg-blue-100 text-blue-800 py-1 px-3 rounded-full">
-                                {transcripts.length} Entries
-                            </span>
-                        </div>
-
-                        {transcripts.length === 0 ? (
-                            <div className="h-4/5 flex flex-col items-center justify-center text-center">
-                                <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <p className="text-gray-500 text-lg font-medium">No transcripts found</p>
-                                <p className="text-gray-400 text-sm mt-1">Upload an audio note to get started.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {transcripts.map((t) => (
-                                    <div key={t.id} className="p-5 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md hover:-translate-y-0.5 transition-all">
-                                        <div className="text-xs font-semibold text-gray-400 mb-3 flex items-center gap-2">
-                                            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            {t.createdAt.toLocaleString(undefined, {
-                                                month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                                            })}
-                                        </div>
-                                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{t.text}</p>
+                        {/* Right Sidebar Column */}
+                        <div className="sidebar-column">
+                            {/* Stats above activity */}
+                            <div className="sidebar-stats">
+                                <div className="stat-card">
+                                    <div className="stat-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
                                     </div>
-                                ))}
+                                    <div className="stat-label">TRANSCRIPTS</div>
+                                    <div className="stat-value primary">{transcripts.length}</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                        </svg>
+                                    </div>
+                                    <div className="stat-label">TOTAL WORDS</div>
+                                    <div className="stat-value gradient">
+                                        {transcripts
+                                            .reduce((acc, t) => acc + t.text.split(/\s+/).filter(Boolean).length, 0)
+                                            .toLocaleString()}
+                                    </div>
+                                </div>
                             </div>
-                        )}
+
+                            {/* History Panel */}
+                            <div className="history-panel">
+                                <ActivityList items={transcripts.map(t => ({
+                                    id: t.id,
+                                    title: t.title ?? null,
+                                    text: t.text,
+                                    createdAt: t.createdAt.toISOString(),
+                                }))} />
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Footer */}
+                    <footer className="db-footer">
+                        <div className="waveform-deco">
+                            {[6, 12, 20, 14, 8, 18, 10, 16, 6, 14, 20, 8, 12].map((h, i) => (
+                                <div
+                                    key={i}
+                                    className="wave-bar"
+                                    style={{
+                                        height: `${h}px`,
+                                        animationDelay: `${i * 0.1}s`,
+                                    }}
+                                />
+                            ))}
+                        </div>
+                        <div className="footer-content">
+                            <span className="footer-brand">Burzt Audio</span>
+                            <span className="footer-dot">·</span>
+                            <span className="footer-text">Crafted with precision</span>
+                            <span className="footer-dot">·</span>
+                            {/* PASTE YOUR CONTACT LINK BELOW in the href="..." attribute */}
+                            <a
+                                href="https://abhijeetg.netlify.app"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="footer-contact"
+                            >
+                                Contact Us ↗
+                            </a>
+                        </div>
+                    </footer>
+
+                    <style>{`
+                      .db-footer {
+                        margin-top: 80px;
+                        padding: 40px 0 32px;
+                        border-top: 1px solid rgba(255,255,255,0.03);
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 24px;
+                      }
+
+                      .waveform-deco {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 3px;
+                        opacity: 0.4;
+                      }
+
+                      .wave-bar {
+                        width: 3px;
+                        background: linear-gradient(to top, #06b6d4, #c084fc);
+                        border-radius: 2px;
+                        animation: wave-dance 1.2s ease-in-out infinite;
+                      }
+
+                      @keyframes wave-dance {
+                        0%, 100% { height: 4px; }
+                        50% { height: 16px; }
+                      }
+
+                      .footer-content {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        font-size: 13px;
+                      }
+
+                      .footer-brand {
+                        font-weight: 600;
+                        color: #94a3b8;
+                      }
+
+                      .footer-dot {
+                        color: #475569;
+                      }
+
+                      .footer-text {
+                        color: #64748b;
+                      }
+
+                      .footer-contact {
+                        color: #c084fc;
+                        text-decoration: none;
+                        font-weight: 500;
+                        transition: color 0.2s;
+                      }
+                      .footer-contact:hover {
+                        color: #d8b4fe;
+                      }
+                    `}</style>
                 </div>
             </div>
-
-            {/* simple global CSS for better scrolling aesthetics inside localized scopes */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background-color: #e2e8f0;
-                    border-radius: 10px;
-                }
-            `}} />
-        </div>
+        </>
     );
 }
