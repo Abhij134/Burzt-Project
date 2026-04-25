@@ -6,15 +6,90 @@ import TranscriberClient from "./TranscriberClient";
 import SignOutButton from "./SignOutButton";
 import ActivityList from "./ActivityList";
 import SearchBar from "./SearchBar";
+import { Suspense } from "react";
+
+async function ActivityFeed({ userId }: { userId: string }) {
+    const transcripts = await prisma.transcript.findMany({
+        where: { userId },
+        select: { id: true, title: true, text: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+    });
+
+    return (
+        <div className="sidebar-column">
+            {/* Stats above activity */}
+            <div className="sidebar-stats">
+                <div className="stat-card">
+                    <div className="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <div className="stat-label">TRANSCRIPTS</div>
+                    <div className="stat-value primary">{transcripts.length}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                    </div>
+                    <div className="stat-label">TOTAL WORDS</div>
+                    <div className="stat-value gradient">
+                        {transcripts
+                            .reduce((acc, t) => acc + t.text.split(/\s+/).filter(Boolean).length, 0)
+                            .toLocaleString()}
+                    </div>
+                </div>
+            </div>
+
+            {/* History Panel */}
+            <div className="history-panel">
+                <ActivityList items={transcripts.map(t => ({
+                    id: t.id,
+                    title: t.title ?? null,
+                    text: t.text,
+                    createdAt: t.createdAt.toISOString(),
+                }))} />
+            </div>
+        </div>
+    );
+}
+
+function FeedSkeleton() {
+    return (
+        <div className="sidebar-column" style={{ opacity: 0.5, pointerEvents: 'none' }}>
+            <div className="sidebar-stats">
+                <div className="stat-card"><div className="stat-label">LOADING...</div></div>
+                <div className="stat-card"><div className="stat-label">LOADING...</div></div>
+            </div>
+            <div className="history-panel">
+                <div style={{ color: '#64748b', fontSize: '13px' }}>Refining your activity stream...</div>
+            </div>
+        </div>
+    );
+}
+
+async function SearchBarData({ userId }: { userId: string }) {
+    const transcripts = await prisma.transcript.findMany({
+        where: { userId },
+        select: { id: true, title: true, text: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+    });
+
+    return (
+        <SearchBar items={transcripts.map(t => ({
+            id: t.id,
+            title: t.title ?? null,
+            text: t.text,
+            createdAt: t.createdAt.toISOString(),
+        }))} />
+    );
+}
 
 export default async function DashboardPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) redirect("/login");
-
-    const transcripts = await prisma.transcript.findMany({
-        where: { userId: session.user.id },
-        orderBy: { createdAt: "desc" },
-    });
 
     const initials = (session.user.email ?? "U")
         .split("@")[0]
@@ -291,6 +366,40 @@ export default async function DashboardPage() {
           padding: 32px;
           animation: fade-up 0.5s ease 0.15s both;
         }
+
+        .animated-subtitle {
+          position: relative;
+          height: 28px;
+          margin-top: 12px;
+          font-size: 16px;
+          color: #94a3b8;
+          font-weight: 500;
+        }
+
+        .subtitle-phrase {
+          position: absolute;
+          top: 0;
+          left: 0;
+          opacity: 0;
+          animation: slideDownCycle 9s infinite;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* Stagger the start times */
+        .phrase-1 { animation-delay: 0s; }
+        .phrase-2 { animation-delay: 3s; }
+        .phrase-3 { animation-delay: 6s; }
+
+        /* The motion: Fade in from top, hold, fade out to bottom */
+        @keyframes slideDownCycle {
+          0% { opacity: 0; transform: translateY(-15px); }
+          8% { opacity: 1; transform: translateY(0); }
+          25% { opacity: 1; transform: translateY(0); }
+          33% { opacity: 0; transform: translateY(15px); }
+          100% { opacity: 0; transform: translateY(15px); }
+        }
       `}</style>
 
             <div className="db-root">
@@ -308,12 +417,9 @@ export default async function DashboardPage() {
                                 <span className="logo-name">Burzt Audio</span>
                             </div>
 
-                            <SearchBar items={transcripts.map(t => ({
-                                id: t.id,
-                                title: t.title ?? null,
-                                text: t.text,
-                                createdAt: t.createdAt.toISOString(),
-                            }))} />
+                            <Suspense fallback={<div className="search-skeleton" />}>
+                                <SearchBarData userId={session.user.id} />
+                            </Suspense>
                         </div>
 
                         <div className="topbar-right">
@@ -329,12 +435,27 @@ export default async function DashboardPage() {
                     <div className="page-header">
                         <div className="page-eyebrow">
                             <span className="eyebrow-dot" />
-                            LIVE · AUDIO INTELLIGENCE V2
+                            LIVE · AUDIO INTELLIGENCE
                         </div>
                         <h1 className="page-title">
                             Turn sound<br />
                             into <span>signal.</span>
                         </h1>
+
+                        <div className="animated-subtitle">
+                            <div className="subtitle-phrase phrase-1">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                Upload any audio file
+                            </div>
+                            <div className="subtitle-phrase phrase-2">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                Paste any video URL
+                            </div>
+                            <div className="subtitle-phrase phrase-3">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" strokeLinejoin="round" d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3zm5-3a5 5 0 01-10 0M12 18v3m-2 0h4" /></svg>
+                                Record live from mic
+                            </div>
+                        </div>
                     </div>
 
                     {/* Main Grid */}
@@ -342,44 +463,9 @@ export default async function DashboardPage() {
                         {/* Upload Panel component wrapper */}
                         <TranscriberClient />
 
-                        {/* Right Sidebar Column */}
-                        <div className="sidebar-column">
-                            {/* Stats above activity */}
-                            <div className="sidebar-stats">
-                                <div className="stat-card">
-                                    <div className="stat-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div className="stat-label">TRANSCRIPTS</div>
-                                    <div className="stat-value primary">{transcripts.length}</div>
-                                </div>
-                                <div className="stat-card">
-                                    <div className="stat-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                                        </svg>
-                                    </div>
-                                    <div className="stat-label">TOTAL WORDS</div>
-                                    <div className="stat-value gradient">
-                                        {transcripts
-                                            .reduce((acc, t) => acc + t.text.split(/\s+/).filter(Boolean).length, 0)
-                                            .toLocaleString()}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* History Panel */}
-                            <div className="history-panel">
-                                <ActivityList items={transcripts.map(t => ({
-                                    id: t.id,
-                                    title: t.title ?? null,
-                                    text: t.text,
-                                    createdAt: t.createdAt.toISOString(),
-                                }))} />
-                            </div>
-                        </div>
+                        <Suspense fallback={<FeedSkeleton />}>
+                            <ActivityFeed userId={session.user.id} />
+                        </Suspense>
                     </div>
 
                     {/* Footer */}

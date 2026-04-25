@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { transcribeAudio, saveTranscript } from "@/app/actions/transcribe";
 
 type Stage = "idle" | "uploading" | "processing" | "done" | "error";
 type Panel = "main" | "recording" | "url";
@@ -31,6 +32,8 @@ export default function TranscriberClient() {
     const [isRecording, setIsRecording] = useState(false);
     const [recordTime, setRecordTime] = useState(0);
     const [urlInput, setUrlInput] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
@@ -92,7 +95,10 @@ export default function TranscriberClient() {
     };
 
     const handleFile = (f: File) => {
-        if (!f.type.startsWith("audio/")) {
+        const isAudio = f.type.startsWith("audio/");
+        const isSupportedVideo = f.type.startsWith("video/mp4") || f.name.endsWith(".mp4") || f.name.endsWith(".m4a");
+
+        if (!isAudio && !isSupportedVideo) {
             setErrorMsg("Please upload an audio file (MP3, WAV, M4A, etc.)");
             setStage("error");
             return;
@@ -131,6 +137,8 @@ export default function TranscriberClient() {
         setErrorMsg("");
         setProgress(0);
         setAudioDuration(null);
+        setSaveSuccess(false);
+        setIsSaving(false);
     };
 
     const handleUpload = async () => {
@@ -155,25 +163,43 @@ export default function TranscriberClient() {
             clearInterval(progressInterval);
             setProgress(90);
 
-            const res = await fetch("/api/transcribe", {
-                method: "POST",
-                body: formData,
-            });
+            const result = await transcribeAudio(formData);
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || "Transcription failed");
+            if (!result.success) {
+                throw new Error(result.error || "Transcription failed");
             }
 
             setProgress(100);
-            setTranscript(data.transcript);
+            setTranscript(result.transcript || "");
             setStage("done");
-            router.refresh();
+            // Note: We don't call router.refresh() here anymore, 
+            // because we haven't saved to DB yet. 
+            // We'll call it after the manual save.
         } catch (err: unknown) {
             clearInterval(progressInterval);
             setErrorMsg(err instanceof Error ? err.message : "Upload failed");
             setStage("error");
+        }
+    };
+
+    const handleSave = async () => {
+        if (!transcript || isSaving) return;
+        setIsSaving(true);
+        try {
+            const res = await saveTranscript(transcript);
+            if (res.success) {
+                setSaveSuccess(true);
+                // Aggressive refresh to ensure ActivityList updates
+                router.refresh();
+                // If router.refresh() is too slow, we can also manually trigger a fetch or use a short delay
+            } else {
+                throw new Error(res.error || "Failed to save");
+            }
+        } catch (err: any) {
+            setErrorMsg(err.message || "Save failed");
+            setStage("error");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -549,8 +575,42 @@ export default function TranscriberClient() {
           line-height: 1.8;
           color: #94a3b8;
           white-space: pre-wrap;
-          max-height: 220px;
+          max-height: 250px;
           overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+
+        .result-actions {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-top: 24px;
+        }
+
+        .save-success-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 20px;
+          background: rgba(192, 132, 252, 0.08);
+          border: 1px solid rgba(192, 132, 252, 0.15);
+          border-radius: 12px;
+          color: #d8b4fe;
+          font-size: 13px;
+          font-weight: 600;
+          animation: scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .save-success-badge svg {
+          width: 14px;
+          height: 14px;
+          color: #c084fc;
+        }
+
+        @keyframes scale-in {
+          from { opacity: 0; transform: scale(0.9) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         /* ── Error ── */
@@ -720,7 +780,7 @@ export default function TranscriberClient() {
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept="audio/*"
+                            accept="audio/*,.mp4,.mp3,.wav,.m4a"
                             style={{ display: "none" }}
                             onChange={(e) => {
                                 const f = e.target.files?.[0];
@@ -827,9 +887,28 @@ export default function TranscriberClient() {
                             <div className="result-text">{transcript}</div>
                         </div>
 
-                        <button className="action-btn secondary" onClick={reset}>
-                            Transcribe another file
-                        </button>
+                        <div className="result-actions">
+                            {!saveSuccess ? (
+                                <button
+                                    className="action-btn primary"
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? "Saving..." : "Save to History"}
+                                </button>
+                            ) : (
+                                <div className="save-success-badge">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Saved
+                                </div>
+                            )}
+
+                            <button className="action-btn secondary" onClick={reset}>
+                                Transcribe another
+                            </button>
+                        </div>
                     </>
                 )}
 

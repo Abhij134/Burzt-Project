@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type TranscriptItem = {
@@ -14,6 +14,12 @@ const PREVIEW_COUNT = 5;
 
 export default function ActivityList({ items }: { items: TranscriptItem[] }) {
     const [transcripts, setTranscripts] = useState(items);
+
+    // Sync local state when items prop changes (e.g. after router.refresh())
+    useEffect(() => {
+        setTranscripts(items);
+    }, [items]);
+
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
