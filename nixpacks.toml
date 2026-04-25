@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["...", "nodejs_22"]
-
-[phases.build]
-cmds = ["prisma generate && next build"]
-
-[variables]
-NIXPACKS_NODE_VERSION = "22.12.0"
